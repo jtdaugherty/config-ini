@@ -25,7 +25,9 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as LazyText
 import qualified Data.Text.Lazy.Builder as Builder
 import           Text.Megaparsec
-import           Text.Megaparsec.Text
+import           Text.Megaparsec.Error
+import           Text.Megaparsec.Char
+import           Data.Void
 
 -- | An 'Ini' value is a mapping from section names to
 --   'IniSection' values. The section names in this mapping are
@@ -103,6 +105,8 @@ parseIni :: Text -> Either String Ini
 parseIni t = case runParser pIni "ini file" t of
   Left err -> Left (parseErrorPretty err)
   Right v  -> Right v
+
+type Parser = Parsec (ErrorFancy Void) Text
 
 pIni :: Parser Ini
 pIni = do
