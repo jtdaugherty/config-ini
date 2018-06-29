@@ -13,6 +13,7 @@ module Data.Ini.Config.Bidir
 -- $using
   parseIniFile
 , emitIniFile
+, emitIni
 , UpdatePolicy(..)
 , UpdateCommentPolicy(..)
 , defaultUpdatePolicy
@@ -405,9 +406,14 @@ runFields s (FieldMb l descr Seq.:< fs) sect
 -- | Serialize a value as an INI file according to a provided
 -- 'IniSpec'.
 emitIniFile :: s -> IniSpec s () -> Text
-emitIniFile s (IniSpec mote) =
+emitIniFile s spec = printIni $ emitIni s spec
+
+-- | Serialize a value as an INI structure according to a provided
+-- 'IniSpec'.
+emitIni :: s -> IniSpec s () -> Ini
+emitIni s (IniSpec mote) =
   let spec = runBidirM mote in
-  printIni $ Ini $ fmap (\ (Section name fs _) -> (name, toSection s name fs)) spec
+  Ini $ fmap (\ (Section name fs _) -> (name, toSection s name fs)) spec
 
 mkComments :: Seq Text -> Seq BlankLine
 mkComments comments =
