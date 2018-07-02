@@ -18,6 +18,7 @@ module Data.Ini.Config.Bidir
 , UpdateCommentPolicy(..)
 , defaultUpdatePolicy
 , updateIniFile
+, updateIni
 -- * Bidirectional Parser Types
 -- $types
 , IniSpec
@@ -505,13 +506,14 @@ data UpdateCommentPolicy
 --  been changed from a default value) will be added to the end of the
 --  section in which they appear.
 updateIniFile :: s -> IniSpec s () -> Text -> UpdatePolicy -> Either String Text
-updateIniFile s (IniSpec mote) t pol =
+updateIniFile s spec t pol = printIni <$> updateIni s spec t pol
+
+updateIni :: s -> IniSpec s () -> Text -> UpdatePolicy -> Either String Ini
+updateIni s (IniSpec mote) t pol =
   let spec = runBidirM mote
   in case parseIni t of
     Left err -> Left ("Error parsing existing INI file: " ++ err)
-    Right (Ini ini) -> do
-      ini' <- updateIniSections s ini spec pol
-      return (printIni (Ini ini'))
+    Right (Ini ini) -> Ini <$> updateIniSections s ini spec pol
 
 updateIniSections :: s -> Seq (Text, IniSection)
                   -> Seq (Section s)
