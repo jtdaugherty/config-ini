@@ -521,11 +521,12 @@ updateIniSections :: s -> Seq (Text, IniSection)
                   -> Either String (Seq (Text, IniSection))
 updateIniSections s sections fields pol =
   F.for sections $ \ (name, sec) -> do
-    let err  = (Left ("Unexpected top-level section: " ++ show name))
-    Section _ spec _ <- maybe err Right
-      (F.find (\ (Section n _ _) -> T.toLower n == name) fields)
-    newVals <- updateIniSection s (isVals sec) spec pol
-    return (name, sec { isVals = newVals })
+    let result = (F.find (\ (Section n _ _) -> T.toLower n == name) fields)
+    case result of
+        Nothing -> return (name, sec)
+        Just (Section _ spec _) -> do
+            newVals <- updateIniSection s (isVals sec) spec pol
+            return (name, sec { isVals = newVals })
 
 updateIniSection :: s -> Seq (Text, IniValue) -> Seq (Field s)
                  -> UpdatePolicy -> Either String (Seq (Text, IniValue))
