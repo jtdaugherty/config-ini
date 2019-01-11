@@ -59,6 +59,7 @@ import qualified Data.Foldable as F
 #if __GLASGOW_HASKELL__ >= 710
 import           Data.Function ((&))
 #endif
+import           Data.Maybe (isJust)
 import           Data.Monoid ((<>))
 import           Data.Sequence ((<|), Seq, ViewL(..))
 import qualified Data.Sequence as Seq
@@ -515,18 +516,30 @@ updateIni s (IniSpec mote) t pol =
     Left err -> Left ("Error parsing existing INI file: " ++ err)
     Right (Ini ini) -> Ini <$> updateIniSections s ini spec pol
 
+-- -- Take sections from the spec that are not in the original and add them.
+-- newSections :: s -> Seq (Section s) -> Seq (Text, IniSection) -> Seq (Text, IniSection)
+-- newSections s fields oldSections =
+--   let newFields = Seq.filter (\ (Section n _ _) -> not (isJust (lkp n oldSections))) fields
+--   in fmap (\ (Section n flds _) -> (n, toSection s n flds)) newFields
+
 updateIniSections :: s -> Seq (Text, IniSection)
                   -> Seq (Section s)
                   -> UpdatePolicy
                   -> Either String (Seq (Text, IniSection))
-updateIniSections s sections fields pol =
-  F.for sections $ \ (name, sec) -> do
+updateIniSections s sections fields pol = do
+  updatedSections <- F.for sections $ \ (name, sec) -> do
     let result = (F.find (\ (Section n _ _) -> T.toLower n == name) fields)
     case result of
         Nothing -> return (name, sec)
         Just (Section _ spec _) -> do
             newVals <- updateIniSection s (isVals sec) spec pol
             return (name, sec { isVals = newVals })
+  -- Next, look for sections that were not in the original file, and
+  -- call updateIniSection on those as well.
+  -- return (updatedSections <> newSections s fields sections)
+  return (updatedSections <> newSections)
+  where newSections = fmap (\ (Section n flds _) -> (n, toSection s n flds)) newFields
+        newFields = Seq.filter (\ (Section n _ _) -> not (isJust (lkp n sections))) fields
 
 updateIniSection :: s -> Seq (Text, IniValue) -> Seq (Field s)
                  -> UpdatePolicy -> Either String (Seq (Text, IniValue))
